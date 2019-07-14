@@ -1,0 +1,19 @@
+---
+title: "Understand sse, rmse, r square"
+author: "Yufan Luo"
+date: "7/14/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+model = paste('model',1:10,sep = '')
+sse = runif(10,min = 4000,max = 10000)
+rmse = sqrt(sse)
+r2 = ((rmse - min(rmse))/(max(rmse)-min(rmse)))*0.9
+results = data.frame(model, sse, rmse, r2)
+results
+```

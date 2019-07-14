@@ -1,0 +1,45 @@
+---
+title: "Diamonds datset"
+author: "Yufan Luo"
+date: "7/14/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+```{r}
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+```
+
+## Know the dataset
+```{r}
+summary(diamonds)
+head(diamonds)
+```
+
+## Variable: cut
+```{r}
+mean(diamonds$carat)
+diamonds%>%group_by(cut)%>%summarize(mean(carat))
+diamonds%>%group_by(cut)%>%summarize(var(carat))
+diamonds%>%filter(color=='D')%>%group_by(cut)%>%summarize(n())
+0.85*(diamonds%>%filter(carat>1)%>%summarize(mean(price)))
+```
+
+## Plots
+```{r}
+ggplot(data=diamonds,aes(x=price))+geom_density()+facet_grid(cut~.)
+ggplot(data=diamonds,aes(x=price,color=cut))+geom_density()
+ggplot(data=diamonds,aes(x=carat))+geom_density()+facet_grid(cut~.)
+ggplot(data=diamonds,aes(x=carat,color=cut))+geom_density()
+ggplot(data=diamonds,aes(x=carat))+ 
+  geom_histogram(binwidth = 0.01)+
+  coord_cartesian(xlim=c(0,2.5))+
+  scale_x_continuous(breaks=seq(0,2.5,0.1))
+```
+
