@@ -1,0 +1,48 @@
+---
+title: "4. Data sampling"
+author: "Yufan Luo"
+date: "10/16/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+```{r}
+library(lattice)
+library(ISLR)
+library(ggplot2)
+library(caret)
+library(caTools)
+```
+
+## SimpleRandomSampling
+```{r}
+set.seed(100)
+split=sample(x=nrow(mpg),size=0.8*nrow(mpg))
+train=mpg[split,]
+test=mpg[-split,]
+table(split)
+difference<-mean(train$hwy)-mean(test$hwy);difference
+```
+
+## caret
+```{r}
+set.seed(100)
+split=createDataPartition(mpg$hwy,p=0.8,list=F,groups=20)
+train=mpg[split,]
+test=mpg[-split,]
+mean(train$hwy)-mean(test$hwy)
+```
+
+## caTools
+```{r}
+set.seed(100)
+split=sample.split(Y=OJ$Purchase,SplitRatio = 0.6)
+train=OJ[split,]
+test=OJ[!split,]
+table(train$Purchase)
+```
+
