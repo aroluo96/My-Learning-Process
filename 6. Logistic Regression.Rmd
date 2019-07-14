@@ -1,0 +1,61 @@
+---
+title: "Logistic Regression"
+author: "Yufan Luo"
+date: "7/14/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+```{r}
+library(ggplot2);library(tidyr);library(dplyr);library(lattice);library(caret);library(caTools);library(gplots);library(ROCR)
+ebay<-read.csv("C:/Users/luoyu/Desktop/COLUMBIA/Methods and Framework/5_logisticregression/assignment/eBayAssignment.csv")
+```
+
+## Know the dataset
+```{r}
+nrow(ebay)
+head(ebay)
+table(ebay$color)
+table(ebay$productline)
+ebay[which.max(ebay$startprice),]
+```
+
+## Spliting dataset
+```{r}
+set.seed(196)
+split=sample.split(Y=ebay$sold,SplitRatio=0.8)
+train=ebay[split,]
+test=ebay[!split,]
+```
+
+## Model building
+```{r}
+model1<-glm(sold~biddable+startprice+condition+cellular+carrier+color+storage+productline+noDescription+charCountDescription+upperCaseDescription+startprice_99end,data=train,family='binomial')
+summary(model1)
+model2<-glm(sold~biddable+startprice+condition+storage+productline+upperCaseDescription+startprice_99end,data=train,family='binomial')
+summary(model2)
+model_productline<-glm(sold~productline,data=train,family='binomial')
+summary(model_productline)
+```
+## Performance of my models
+```{r}
+pred=predict(model2,newdata=test,type='response')
+ct=table(test$sold,pred>0.5)
+accuracy=sum(ct[1,1],ct[2,2])/nrow(test)
+accuracy
+table(test$sold)
+baseline_test=table(test$sold)[1]/nrow(test)
+baseline_test
+```
+## ROCR
+```{r}
+ROCRpred = prediction(pred,test$sold)
+as.numeric(performance(ROCRpred,"auc")@y.values)
+ROCRperf = performance(ROCRpred,"tpr","fpr")
+plot(ROCRperf,colorize=TRUE,print.cutoffs.at=seq(0,1,0.2),text.adj=c(-0.3,2),xlab="1 - Specificity",ylab="Sensitivity") # color coded, annotated ROC curve
+```
+

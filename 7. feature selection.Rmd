@@ -1,0 +1,105 @@
+---
+title: "Feature Selection"
+author: "Yufan Luo"
+date: "7/14/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r}
+houses<-read.csv("C:/Users/luoyu/Desktop/COLUMBIA/Methods and Framework/6_featureselection/assignment/houses.csv")
+library(lattice);library(carData);library(Matrix);library(caret);library(tidyr);library(dplyr);library(ggplot2);library(gplots);library(corrplot);library(car);library(leaps);library(glmnet);library(ISLR);library(ROCR);library(caTools)
+```
+
+## Splitting data
+```{r}
+set.seed(1031)
+split=createDataPartition(y=houses$price,p=0.7,list=F,groups=100)
+train=houses[split,]
+test=houses[-split,]
+```
+
+## Know the dataset
+```{r}
+cor(train$price,train[,-2])
+corrplot(cor(train[,c(3:7, 10:13,16)]),method = 'square',type = 'lower',diag = F)
+cor(train$sqft_living,train$sqft_above+train$sqft_basement)
+```
+
+## Basic Model
+```{r}
+model1<-lm(price~bedrooms+bathrooms+sqft_living+sqft_lot+floors+waterfront+view+condition+grade+age,data=train)
+vif(model1)
+```
+
+## Subsetting method
+```{r}
+subsets=regsubsets(price~bedrooms+bathrooms+sqft_living+sqft_lot+floors+waterfront+view+condition+grade+age,data=train,nvmax=10)
+summary(subsets)
+names(summary(subsets))
+model2<-lm(price~bedrooms+sqft_living+waterfront+view+grade+age,data=train)
+summary(model2)
+```
+
+##forward
+```{r}
+start_mod=lm(price~1,data=train)
+empty_mod=lm(price~1,data=train)
+full_mod=lm(price~bedrooms+bathrooms+sqft_living+sqft_lot+floors+waterfront+view+condition+grade+age,data=train)
+forwardStepwise=step(start_mod,scope=list(upper=full_mod,lower=empty_mod),direction='forward')
+```
+
+##backward
+```{r}
+start_mod=lm(price~bedrooms+bathrooms+sqft_living+sqft_lot+floors+waterfront+view+condition+grade+age,data=train)
+empty_mod=lm(price~1,data=train)
+full_mod=lm(price~bedrooms+bathrooms+sqft_living+sqft_lot+floors+waterfront+view+condition+grade+age,data=train)
+backwardStepwise=step(start_mod,scope=list(upper=full_mod,lower=empty_mod),direction='backward')
+```
+
+##hyber
+```{r}
+start_mod=lm(price~1,data=train)
+empty_mod=lm(price~1,data=train)
+full_mod=lm(price~bedrooms+bathrooms+sqft_living+sqft_lot+floors+waterfront+view+condition+grade+age,data=train)
+hybridStepwise=step(start_mod,scope=list(upper=full_mod,lower=empty_mod),direction='both')
+```
+
+#lasso
+```{r}
+x=model.matrix(price~bedrooms+bathrooms+sqft_living+sqft_lot+floors+waterfront+view+condition+grade+age-1,data=train)
+y=train$price               
+cv.lasso=cv.glmnet(x,y,alpha=1)
+coef(cv.lasso)
+plot(cv.lasso)
+model3<-lm(price~bathrooms+sqft_living+waterfront+view+grade+age,data=train)
+summary(model3)
+```
+
+#dimension reduction
+```{r}
+trainPredictors = train[,c(3:11,16)]
+testPredictors = test[,c(3:11,16)]
+x = preProcess(x = trainPredictors,method = 'pca',thresh = 0.9)
+trainComponents = predict(x,newdata=trainPredictors)
+trainComponents$price = train$price
+x
+train_model=lm(price~.,trainComponents)
+summary(train_model)
+testComponents = predict(x,newdata=testPredictors)
+testComponents$price = test$price
+pred=predict(train_model,newdata = testComponents)
+sse=sum((pred-testComponents$price)^2)
+sst=sum((mean(trainComponents$price)-testComponents$price)^2)
+r2=1-sse/sst;r2
+```
+
