@@ -1,0 +1,103 @@
+---
+title: "Text Mining"
+author: "Yufan Luo"
+date: "3/1/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+```{r}
+library(ggplot2);library(ggthemes);library(stringr);library(qdap);library(qdapDictionaries);library(qdapRegex);library(tidytext);library(tm)
+data=read.csv("C:/Users/luoyu/Desktop/COLUMBIA/Methods and Framework II/6textmining_homework/textmining_assignment/baby_reviews.csv",stringsAsFactors = F)
+```
+
+## Know the dataset
+
+```{r}
+str(data)
+# statistical description
+mean(data$review_rating)
+mean(nchar(data$review))
+cor(nchar(data$review),data$review_rating)
+# pattern
+median(str_count(string=data$review,pattern='\\S+'))
+which.max(str_count(string=data$review,pattern='\\S+'))
+str_count(string=data$review[4348],pattern='\\S+')
+str_count(string=data$review[which.min(str_count(string=data$review,pattern='\\S+'))],pattern='\\S+')
+# frequent terms
+freq_terms(text.var = data$review,top = 10)
+freq_terms(text.var=data$review,top=10,stopwords = Top200Words)
+```
+
+## sentiment analysis
+
+```{r}
+data%>%select(id,review)%>%group_by(id)%>%unnest_tokens(output=word,input=review)%>%ungroup()%>%count()
+data%>%group_by(id)%>%unnest_tokens(output=word,input=review)%>%inner_join(get_sentiments('bing'))%>%group_by(sentiment)%>%count()
+#count
+data%>%select(id,review)%>%group_by(id)%>%unnest_tokens(output=word,input=review)%>%ungroup()%>%inner_join(get_sentiments('bing'))%>%group_by(sentiment)%>%summarize(n=n())%>%mutate(proportion=n/sum(n))
+#select
+data%>%select(id,review,review_rating)%>%group_by(id)%>%unnest_tokens(output=word,input=review)%>%ungroup()%>%inner_join(get_sentiments('bing'))%>%group_by(review_rating,sentiment)%>%summarize(n=n())%>%mutate(proportion=n/sum(n))
+data%>%group_by(id)%>%unnest_tokens(output=word,input=review)%>%inner_join(get_sentiments('nrc'))%>%group_by(sentiment)%>%count()
+data%>%select(id,review)%>%group_by(id)%>%unnest_tokens(output=word,input=review)%>%inner_join(get_sentiments('afinn'))%>%summarize(reviewSentiment=mean(score))%>%ungroup()%>%summarize(min=min(reviewSentiment),max=max(reviewSentiment),median=median(reviewSentiment),mean=mean(reviewSentiment))
+data %>%
+  select(id,review)%>%
+  group_by(id)%>%
+  unnest_tokens(output=word,input=review)%>%
+  inner_join(get_sentiments('afinn'))%>%
+  filter(id==2598)%>%
+  summarize(reviewSentiment = mean(score))
+```
+
+## corpus
+
+```{r}
+corpus=Corpus(VectorSource(data$review))
+corpus=tm_map(corpus,FUN=content_transformer(tolower))
+corpus=tm_map(corpus,FUN=removePunctuation)
+corpus=tm_map(corpus,FUN=removeWords,c(stopwords('english')))
+corpus=tm_map(corpus,FUN=stripWhitespace)
+dict=findFreqTerms(DocumentTermMatrix(Corpus(VectorSource(data$review))),lowfreq=0)
+dict_corpus=Corpus(VectorSource(dict))
+corpus=tm_map(corpus,FUN=stemDocument)
+dtm=DocumentTermMatrix(corpus)
+dtm
+inspect(dtm[100,])
+inspect(dtm[100,'amazon'])
+xdtm=removeSparseTerms(dtm,sparse=0.90)
+xdtm
+xdtm=as.data.frame(as.matrix(xdtm))
+colnames(xdtm)=stemCompletion(x=colnames(xdtm),dictionary=dict_corpus,type='prevalent')
+colnames(xdtm)=make.names(colnames(xdtm))
+sort(colSums(xdtm),decreasing=T)
+head(xdtm)
+xdtm2=xdtm[data$review_rating==5,]
+sort(colSums(xdtm2),decreasing=T)
+```
+
+## model building
+
+```{r}
+set.seed(1031)
+xdtm3=cbind(review_rating=data$review_rating,xdtm)
+split = sample(1:nrow(xdtm3),size = 0.7*nrow(xdtm3))
+train = xdtm3[split,]
+test = xdtm3[-split,]
+nrow(test)
+library(rpart);library(rpart.plot)
+train
+tree=rpart(review_rating~.,train)
+rpart.plot(tree)
+reg=lm(review_rating~.,data=train)
+summary(reg)
+pred_tree=predict(tree,newdata=test)
+rmse_tree=sqrt(mean((pred_tree-test$review_rating)^2))
+rmse_tree
+pred_reg=predict(reg,newdata=test)
+rmse_reg=sqrt(mean((pred_reg-test$review_rating)^2));rmse_reg
+```
+

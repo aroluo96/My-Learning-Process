@@ -1,0 +1,101 @@
+---
+title: "cluster"
+author: "Yufan Luo"
+date: "2/15/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+```{r cars}
+data=read.csv("C:/Users/luoyu/Desktop/COLUMBIA/Methods and Framework II/3cluster_homework/homework/fastfood_survey (1).csv",stringsAsFactors = F)
+```
+
+## Data Preparation
+
+```{r}
+#select variable
+names(data)
+data_cluster<-data[,1:11]
+#deal with missing values
+library(mice)
+set.seed(1706)
+data_cluster=complete(mice(data_cluster))
+#scale
+data_cluster<-scale(data_cluster)
+head(data_cluster,10)
+```
+
+## hierarchical clustering
+```{r}
+library(cluster)
+d=dist(x=data_cluster,method='euclidean')
+clusters=hclust(d=d,method='ward.D2')
+plot(clusters)
+cor(cophenetic(clusters),d)
+h_segments2=cutree(tree=clusters,k=2)
+table(h_segments2)
+h_segments3=cutree(tree=clusters,k=3)
+table(h_segments3)
+```
+
+## K-means clustering
+```{r}
+km2=kmeans(x=data_cluster,centers=2,iter.max=100)
+table(km2$cluster)
+km3=kmeans(x=data_cluster,centers=3,iter.max=100)
+#number of clusters within sum of squares
+within_ss=sapply(1:10,FUN=function(x) kmeans(x=data_cluster,centers=x,iter.max=100)$tot.withinss)
+within_ss
+ggplot(data=data.frame(cluster=1:10,within_ss),aes(x=cluster,y=within_ss))+geom_line(col='steelblue',size=1.2)+geom_point()+scale_x_continuous(breaks=seq(1,10,1))
+#number of clusters using Silhouette method
+pam(data_cluster,k=2)$silinfo$avg.width
+pam(data_cluster,k=3)$silinfo$avg.width
+silhoette_width=sapply(2:7,FUN=function(x) pam(x=data_cluster,k=x)$silinfo$avg.width)
+ggplot(data=data.frame(cluster = 2:7,silhoette_width),aes(x=cluster,y=silhoette_width))+
+  geom_line(col='steelblue',size=1.2)+
+  geom_point()+
+  scale_x_continuous(breaks=seq(2,7,1))
+```
+## Model-based Clustering
+```{r}
+library(mclust)
+mclust=Mclust(data_cluster)
+summary(mclust)
+mclust_bic=-sapply(1:10,FUN=function(x) Mclust(data_cluster,G=x)$bic)
+mclust_bic
+clusters_mclust_2=Mclust(data_cluster,G=2)
+summary(clusters_mclust_2)
+clusters_mclust_3=Mclust(data_cluster,G=3)
+summary(clusters_mclust_3)
+m_segments=clusters_mclust_3$classification
+table(m_segments)
+```
+
+## comparison
+
+```{r}
+sum(h_segments3!= km3$cluster)
+sum(km3$cluster !=clusters_mclust_3$classification)
+```
+
+## application
+
+```{r}
+set.seed(1706)
+km_3 = kmeans(x = data_cluster,centers = 3,iter.max=100)
+km_seg=km_3$cluster
+km_data = cbind(km_seg,data)
+library(dplyr)
+km_data %>%
+  group_by(km_seg)%>%
+  summarize_all(function(x) round(mean(x,na.rm=T),2))%>%
+  data.frame()
+data3=data.frame(cbind(km_seg,data))
+lapply(13:21,function(x)round(prop.table(table(data3$km_seg,data3[,x]),1),2)*100)
+```
+
