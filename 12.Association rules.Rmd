@@ -1,0 +1,32 @@
+---
+title: "Association rules"
+author: "Yufan Luo"
+date: "4/16/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+```{r}
+library(readxl);library(ggplot2);library(dplyr);library(arules)
+data("Groceries")
+summary(Groceries)
+```
+
+## Association rules
+
+```{r}
+rules1<-apriori(Groceries,parameter=list(support=0.01,confidence=0.01))
+summary(rules1)
+rules2<-apriori(Groceries,parameter=list(support=0.001,confidence=0.001))
+summary(rules2)
+inspect(rules1[inspect(rules1@lhs)=='{root vegetables}'&inspect(rules1@rhs)=='{beef}'])
+sort(inspect(rules1[inspect(rules1@lhs)=='{yogurt}'])$confidence,decreasing=T)
+sort(inspect(rules1[inspect(rules1@lhs)=='{yogurt}'])$support,decreasing=T)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.

@@ -1,0 +1,86 @@
+---
+title: "recommendation system"
+author: "Yufan Luo"
+date: "7/16/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+```{r}
+data<-read.csv('C:/Users/luoyu/Desktop/COLUMBIA/Methods and Framework II/9recommendsystem_homework/product_ratings_data.csv',stringsAsFactors = F)
+library(recommenderlab)
+```
+
+## Prepare the data
+
+```{r}
+#recast
+ratings_matrix<-as(data,Class='realRatingMatrix')
+as(ratings_matrix,'matrix')  
+getList(ratings_matrix['u10023','prod_14'])
+#split
+set.seed(1031)
+split=sample(nrow(ratings_matrix),size=0.9*nrow(ratings_matrix))
+train=ratings_matrix[split,]
+test=ratings_matrix[-split,]
+#know the data
+dim(train)
+nratings(train['u20150',])
+nratings(train[,'prod_25'])
+str(train)
+table(getRatings(train))
+mean(getRatings(train[,'prod_100']))
+mean(getRatings(normalize(train,method='center')[,'prod_100']))
+similarity(normalize(train)[1:5],method='cosine')
+```
+
+## UBCF
+
+```{r}
+recommenderRegistry$get_entries('UBCF',type='realRatingMaatrix')
+recomubcf<-Recommender(train,'UBCF')
+predubcf=predict(recomubcf,test,type='ratingMatrix')
+predubcf5=predict(recomubcf,test,n=5)
+getList(predubcf5)$u10088
+as(predubcf,'matrix')['u10088',]
+```
+
+## IBCF
+
+```{r}
+recommenderRegistry$get_entries('IBCF',type='realRatingMaatrix')
+recomibcf<-Recommender(train,'IBCF')
+predibcf=predict(recomibcf,test,type='ratingMatrix')
+predibcf5=predict(recomibcf,test,n=5)
+getList(predibcf5)$u10088
+as(predibcf,'matrix')['u10088',]
+```
+
+## Testing
+
+```{r}
+set.seed(1031)
+es=evaluationScheme(ratings_matrix,method='split',train=0.8,given=30)
+recom=Recommender(getData(es,'train'),method='IBCF')
+pred_ibcf=predict(recom,newdata=getData(es,'known'),type='ratings')
+accuracy_ibcf=calcPredictionAccuracy(x=pred_ibcf,data=getData(es,'unknown'))
+accuracy_ibcf
+recom2=Recommender(getData(es,'train'),method='UBCF')
+pred_ubcf=predict(recom2,newdata=getData(es,'known'),type='ratings')
+accuracy_ubcf=calcPredictionAccuracy(x=pred_ubcf,data=getData(es,'unknown'))
+accuracy_ubcf
+recom3=Recommender(getData(es,'train'),method='UBCF',parameter=list(nn=100))
+pred_ubcf2=predict(recom3,newdata=getData(es,'known'),type='ratings')
+accuracy_ubcf2=calcPredictionAccuracy(x=pred_ubcf2,data=getData(es,'unknown'))
+accuracy_ubcf2
+recom4=Recommender(getData(es,'train'),method='POPULAR')
+pred_ibcf=predict(recom4,newdata=getData(es,'known'),type='ratings')
+accuracy_ibcf=calcPredictionAccuracy(x=pred_ibcf,data=getData(es,'unknown'))
+accuracy_ibcf
+```
+

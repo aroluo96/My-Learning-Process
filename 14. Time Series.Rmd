@@ -1,0 +1,81 @@
+---
+title: "Time Series"
+author: "Yufan Luo"
+date: "5/1/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+```{r}
+library(ggplot2)
+library(quantmod)
+library(xts)
+library(zoo)
+library(forecast)
+library(fpp)
+library(fpp2)
+library(dplyr)
+library(ggthemes)
+library(forecast)
+goog=readRDS("C:/Users/luoyu/Desktop/COLUMBIA/Methods and Framework II/10time_series/goog.RDS")
+```
+
+## Prepare the data and Know the functions
+
+```{r}
+head(goog)
+goog1<-ts(data=goog,start=2007,frequency=12)
+mean(window(goog1,start=c(2010,1),end=c(2010,12)))
+start(goog1) 
+end(goog1)
+length(goog1)
+count(window(goog1,start=c(2007,1),end=c(2018,10)))
+lag1=lag(goog,k=1)
+cor(lag1,goog,use='complete.obs')
+train = window(goog1,start=c(2007,01),end=c(2015,12))
+test = window(goog1,start=c(2016,01),end=c(2018,10))
+length(train)
+ggAcf(train)
+```
+
+## Models
+
+```{r}
+#average model
+average_model=meanf(train,h=34)
+average_model
+accuracy(average_model)
+accuracy(average_model,x=test)
+#naive model
+naive_model=naive(train,h=34)
+naive_model
+accuracy(naive_model,test)
+#ets model
+ets_model<-ets(train,model = 'AAA')
+summary(ets_model)
+checkresiduals(ets_model)
+ggAcf(train)
+ets_forcast=forecast(ets_model,h=34)
+ets_forcast
+accuracy(ets_forcast,x=test)
+#arima
+auto_arima_model<-auto.arima(train)
+auto_arima_model
+ggtsdisplay(residuals(auto_arima_model))
+arima_forcast=forecast(auto_arima_model,h=34)
+arima_forcast
+accuracy(arima_forcast,test)
+BoxCox.lambda(train)
+arima_model=Arima(train,order = c(1,1,1),seasonal = c(3,1,0),lambda=BoxCox.lambda(train))
+arima_model
+ggtsdisplay(residuals(arima_model))
+arima_forcast2=forecast(arima_model,h=34)
+arima_forcast2
+accuracy(arima_forcast2,test)
+```
+
